@@ -1,21 +1,16 @@
-use core::time;
 use memmem::{Searcher, TwoWaySearcher};
-use std::{
-    io::{self, Read, Write},
-    string, thread,
-};
+use std::io::{self, Read, Write};
 
 use quick_xml::{de::from_str, se::to_string};
-use serde::{de::DeserializeOwned, Deserialize};
 
 mod error;
 pub mod xml;
 
-use crate::netconf::{error::NETCONFError, xml::{RPC, RPCError, RPCReplyCommand, RPCErrorInfo}};
+use crate::netconf::xml::{RPC, RPCError, RPCErrorInfo};
 
 use self::{
     error::NETCONFResult,
-    xml::{ConfigurationConfirmed, ConfigurationInformation, Hello, RPCCommand, RPCReply},
+    xml::{ConfigurationConfirmed, Hello, RPCCommand, RPCReply},
 };
 
 pub struct NETCONFClient {

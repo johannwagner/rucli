@@ -1,6 +1,5 @@
 use std::fmt::Display;
 
-use serde::Deserializer;
 use serde_derive::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]

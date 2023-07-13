@@ -12,6 +12,7 @@ quick-xml = { version = "0.29.0", features = ["serialize"] }
 serde = "1.0.171"
 serde_derive = "1.0.171"
 ssh2 = "0.9.4"
+ssh2-config = "0.2.0"
 
 [lib]
 name = "rucli"

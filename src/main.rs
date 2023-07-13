@@ -1,12 +1,14 @@
 use core::time;
-use std::time::Duration;
 use std::{env, fs, thread};
+use std::fs::File;
+use std::io::BufReader;
+use std::path::Path;
 
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{Parser, Subcommand, ValueEnum, ArgAction};
+use ssh2_config::{ParseRule, SshConfig};
 
-use rucli::netconf::xml::{ConfigurationInformation, RPCCommand, RPCReply, RPCReplyCommand, RPC};
-use rucli::netconf::{self, NETCONFClient};
-use rucli::ssh::{self, SSHConnection};
+use rucli::netconf::NETCONFClient;
+use rucli::ssh::SSHConnection;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -15,6 +17,9 @@ struct Cli {
 
     #[arg(long, short)]
     user: Option<String>,
+
+    #[arg(long, short, action=ArgAction::SetTrue)]
+    debug: bool,
 
     #[command(subcommand)]
     command: Commands,
@@ -48,10 +53,21 @@ enum Commands {
 fn main() {
     let cli = Cli::parse();
 
-    let ssh_user = cli.user.unwrap_or(env::var("USER").unwrap());
+    let ssh_user = match cli.user {
+        Some(user) => user,
+        None => (|| -> Option<String> {
+            let mut reader = BufReader::new(
+                File::open(Path::new((env::var("HOME").unwrap().to_owned() + "/.ssh/config").as_str())).ok()?
+            );
+            let config = SshConfig::default().parse(&mut reader, ParseRule::STRICT).ok()?;
+            let params = config.query(&cli.hostname);
+
+            params.user
+        })().unwrap_or(env::var("USER").unwrap())
+    };
 
     let mut ssh_connection =
-        SSHConnection::new(ssh_user.as_str(), format!("{}:830", cli.hostname).as_str());
+        SSHConnection::new(ssh_user.as_str(), format!("{}:830", cli.hostname).as_str(), cli.debug);
     ssh_connection.connect().unwrap();
 
     let mut netconf_session = NETCONFClient::new(ssh_connection.channel.expect(""));
