@@ -1,8 +1,8 @@
 use core::time;
 use std::time::Duration;
-use std::{env, fs, thread};
+use std::{fs, thread};
 
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{Parser, Subcommand, ValueEnum, ValueHint};
 
 use rucli::netconf::xml::{ConfigurationInformation, RPCCommand, RPCReply, RPCReplyCommand, RPC};
 use rucli::netconf::{self, NETCONFClient};
@@ -11,10 +11,11 @@ use rucli::ssh::{self, SSHConnection};
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
+    #[arg(value_hint = ValueHint::Hostname)]
     hostname: String,
 
-    #[arg(long, short)]
-    user: Option<String>,
+    #[arg(long, short, env, value_hint = ValueHint::Username)]
+    user: String,
 
     #[command(subcommand)]
     command: Commands,
@@ -35,23 +36,31 @@ enum Commands {
         #[clap(value_enum)]
         format: Format,
 
+        #[arg(
+            value_hint = ValueHint::CommandWithArguments,
+            trailing_var_arg = true,
+        )]
         command: Vec<String>,
     },
 
     /// Applies local configuration file on router
-    Apply { local_file: String },
+    Apply {
+        #[arg(value_hint = ValueHint::FilePath)]
+        local_file: String,
+    },
 
     /// Loads local configuration onto router and shows a diff
-    Check { local_file: String },
+    Check {
+        #[arg(value_hint = ValueHint::FilePath)]
+        local_file: String,
+    },
 }
 
 fn main() {
     let cli = Cli::parse();
 
-    let ssh_user = cli.user.unwrap_or(env::var("USER").unwrap());
-
     let mut ssh_connection =
-        SSHConnection::new(ssh_user.as_str(), format!("{}:830", cli.hostname).as_str());
+        SSHConnection::new(&cli.user, format!("{}:830", cli.hostname).as_str());
     ssh_connection.connect().unwrap();
 
     let mut netconf_session = NETCONFClient::new(ssh_connection.channel.expect(""));
