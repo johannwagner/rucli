@@ -53,18 +53,19 @@ enum Commands {
 fn main() {
     let cli = Cli::parse();
 
-    let ssh_user = match cli.user {
-        Some(user) => user,
-        None => (|| -> Option<String> {
+    let ssh_user = cli
+        .user
+        .or_else(|| {
             let mut reader = BufReader::new(
-                File::open(Path::new((env::var("HOME").unwrap().to_owned() + "/.ssh/config").as_str())).ok()?
+                File::open(Path::new(&env::var_os("HOME")?).join(".ssh").join("config")).ok()?,
             );
-            let config = SshConfig::default().parse(&mut reader, ParseRule::STRICT).ok()?;
-            let params = config.query(&cli.hostname);
-
-            params.user
-        })().unwrap_or(env::var("USER").unwrap())
-    };
+            SshConfig::default()
+                .parse(&mut reader, ParseRule::STRICT)
+                .ok()?
+                .query(&cli.hostname)
+                .user
+        })
+        .unwrap_or_else(|| env::var("USER").unwrap());
 
     let mut ssh_connection =
         SSHConnection::new(ssh_user.as_str(), format!("{}:830", cli.hostname).as_str(), cli.debug);
