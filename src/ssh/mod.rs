@@ -8,6 +8,7 @@ pub mod error;
 
 pub struct SSHConnection {
     pub user: String,
+    pub password: Option<String>,
     pub target: String,
     pub debug: bool,
 
@@ -16,9 +17,10 @@ pub struct SSHConnection {
 }
 
 impl SSHConnection {
-    pub fn new(user: &str, target: &str, debug: bool) -> SSHConnection {
+    pub fn new(user: &str, password: Option<String>, target: &str, debug: bool) -> SSHConnection {
         return SSHConnection {
             user: String::from(user),
+            password: password,
             target: String::from(target),
             debug,
             sess: None,
@@ -34,7 +36,11 @@ impl SSHConnection {
             sess.trace(TraceFlags::AUTH | TraceFlags::KEX | TraceFlags::PUBLICKEY);
         };
         sess.handshake()?;
-        sess.userauth_agent(self.user.as_str())?;
+        if self.password.is_some() {
+            sess.userauth_password(self.user.as_str(), self.password.clone().unwrap().as_str())?;
+        } else {
+            sess.userauth_agent(self.user.as_str())?;
+        }
 
         let mut channel = sess.channel_session()?;
         channel.subsystem("netconf")?;

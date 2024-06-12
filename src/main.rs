@@ -17,6 +17,9 @@ struct Cli {
     #[arg(long, short)]
     user: Option<String>,
 
+    #[arg(long, short, env)]
+    password: Option<String>,
+
     #[arg(long, short, action=ArgAction::SetTrue)]
     debug: bool,
 
@@ -79,6 +82,7 @@ fn main() {
 
     let mut ssh_connection = SSHConnection::new(
         ssh_user.as_str(),
+        cli.password,
         format!("{}:830", cli.hostname).as_str(),
         cli.debug,
     );
