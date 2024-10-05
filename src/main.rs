@@ -1,8 +1,7 @@
-use core::time;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
-use std::{env, fs, thread};
+use std::{env, fs};
 
 use clap::{ArgAction, Parser, Subcommand, ValueEnum};
 use ssh2_config::{ParseRule, SshConfig};
@@ -44,7 +43,13 @@ enum Commands {
     },
 
     /// Applies local configuration file on router
-    Apply { local_file: String },
+    Apply {
+        local_file: String,
+        confirm_timeout: Option<i32>,
+    },
+
+    /// Confirm a previously applied configuration
+    Confirm,
 
     /// Loads local configuration onto router and shows a diff
     Check { local_file: String },
@@ -97,7 +102,10 @@ fn main() {
 
             println!("{}", r)
         }
-        Commands::Apply { local_file } => {
+        Commands::Apply {
+            local_file,
+            confirm_timeout,
+        } => {
             let data = fs::read_to_string(local_file).unwrap();
 
             let _ = netconf_session.lock_configuration().unwrap();
@@ -110,20 +118,20 @@ fn main() {
                 .unwrap();
             println!("{}", diff_reply);
 
-            println!("Applying configuration and waiting some time...");
+            println!("Applying configuration...");
 
-            let apply_reply = netconf_session.apply_configuration().unwrap();
+            let apply_reply = netconf_session
+                .apply_configuration(confirm_timeout)
+                .unwrap();
             println!("{}", apply_reply);
 
-            let ten_millis = time::Duration::from_secs(5);
-            thread::sleep(ten_millis);
-
+            let _ = netconf_session.unlock_configuration().unwrap();
+        }
+        Commands::Confirm => {
             println!("Confirming configuration");
 
             let confirm_reply = netconf_session.confirm_configuration().unwrap();
             println!("{}", confirm_reply);
-
-            let _ = netconf_session.unlock_configuration().unwrap();
         }
         Commands::Check { local_file } => {
             let data = fs::read_to_string(local_file).unwrap();

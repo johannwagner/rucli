@@ -122,14 +122,21 @@ impl NETCONFClient {
         return self.read_result();
     }
 
-    pub fn apply_configuration(&mut self) -> NETCONFResult<RPCReply> {
-        let c = RPC {
-            rpc: RPCCommand::CommitConfirmedConfiguration {
-                confirm_timeout: 5,
-                confirmed: ConfigurationConfirmed {},
-            },
-        };
-        let _ = self.send_rpc(c)?;
+    pub fn apply_configuration(&mut self, confirm_timeout: Option<i32>) -> NETCONFResult<RPCReply> {
+        if let Some(confirm_timeout) = confirm_timeout {
+            let c = RPC {
+                rpc: RPCCommand::CommitConfirmedConfiguration {
+                    confirm_timeout,
+                    confirmed: ConfigurationConfirmed {},
+                },
+            };
+            let _ = self.send_rpc(c)?;
+        } else {
+            let c = RPC {
+                rpc: RPCCommand::CommitConfiguration {},
+            };
+            let _ = self.send_rpc(c)?;
+        }
         return self.read_result();
     }
 
