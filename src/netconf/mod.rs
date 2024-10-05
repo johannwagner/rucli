@@ -6,7 +6,7 @@ use quick_xml::{de::from_str, se::to_string};
 mod error;
 pub mod xml;
 
-use crate::netconf::xml::{RPC, RPCError, RPCErrorInfo};
+use crate::netconf::xml::{RPCError, RPCErrorInfo, RPC};
 
 use self::{
     error::NETCONFResult,
@@ -84,8 +84,6 @@ impl NETCONFClient {
         // FIXME: Errors might not come first.
         match conf_info.rpc_reply.first() {
             Some(xml::RPCReplyCommand::RPCError(x)) => {
-
-                
                 let rpc: RPCError = RPCError {
                     error_info: RPCErrorInfo {
                         bad_element: x.error_info.bad_element.to_string(),

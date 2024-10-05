@@ -1,4 +1,3 @@
-
 #[derive(Debug)]
 pub enum SSHError {
     SSHError(ssh2::Error),

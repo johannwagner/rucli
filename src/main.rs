@@ -1,10 +1,10 @@
 use core::time;
-use std::{env, fs, thread};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
+use std::{env, fs, thread};
 
-use clap::{Parser, Subcommand, ValueEnum, ArgAction};
+use clap::{ArgAction, Parser, Subcommand, ValueEnum};
 use ssh2_config::{ParseRule, SshConfig};
 
 use rucli::netconf::NETCONFClient;
@@ -57,17 +57,26 @@ fn main() {
         Some(user) => user,
         None => (|| -> Option<String> {
             let mut reader = BufReader::new(
-                File::open(Path::new((env::var("HOME").unwrap().to_owned() + "/.ssh/config").as_str())).ok()?
+                File::open(Path::new(
+                    (env::var("HOME").unwrap().to_owned() + "/.ssh/config").as_str(),
+                ))
+                .ok()?,
             );
-            let config = SshConfig::default().parse(&mut reader, ParseRule::STRICT).ok()?;
+            let config = SshConfig::default()
+                .parse(&mut reader, ParseRule::STRICT)
+                .ok()?;
             let params = config.query(&cli.hostname);
 
             params.user
-        })().unwrap_or(env::var("USER").unwrap())
+        })()
+        .unwrap_or(env::var("USER").unwrap()),
     };
 
-    let mut ssh_connection =
-        SSHConnection::new(ssh_user.as_str(), format!("{}:830", cli.hostname).as_str(), cli.debug);
+    let mut ssh_connection = SSHConnection::new(
+        ssh_user.as_str(),
+        format!("{}:830", cli.hostname).as_str(),
+        cli.debug,
+    );
     ssh_connection.connect().unwrap();
 
     let mut netconf_session = NETCONFClient::new(ssh_connection.channel.expect(""));

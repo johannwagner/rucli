@@ -1,12 +1,11 @@
 use super::xml::RPCError;
 
-
 #[derive(Debug)]
 pub enum NETCONFError {
     IoError(std::io::Error),
     XmlError(quick_xml::Error),
     XmlDeError(quick_xml::DeError),
-    RpcError(RPCError)
+    RpcError(RPCError),
 }
 
 pub type NETCONFResult<T> = Result<T, NETCONFError>;
