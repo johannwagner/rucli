@@ -4,22 +4,32 @@ use serde_derive::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename = "hello")]
+#[serde(deny_unknown_fields)]
 pub struct Hello {
     pub capabilities: Capabilities,
+    #[serde(rename = "session-id")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub session_id: Option<String>,
+    #[serde(rename = "@xmlns")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub namespace: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct Capabilities {
     pub capability: Vec<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename = "rpc")]
+#[serde(deny_unknown_fields)]
 pub struct RPC {
     pub rpc: RPCCommand,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub enum RPCCommand {
     #[serde(rename = "get-configuration")]
     GetConfiguration {
@@ -87,6 +97,7 @@ pub struct RPCReply {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub enum RPCReplyCommand {
     #[serde(rename = "output")]
     Output {
@@ -114,14 +125,14 @@ pub enum RPCReplyCommand {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-
+#[serde(deny_unknown_fields)]
 pub struct LoadConfigurationResults {
     #[serde(rename = "$value")]
-    load_configuration_results: Vec<LoadConfigurationResultsEnum>,
+    pub load_configuration_results: Vec<LoadConfigurationResultsEnum>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-
+#[serde(deny_unknown_fields)]
 pub enum LoadConfigurationResultsEnum {
     #[serde(rename = "ok")]
     Ok,
@@ -185,29 +196,37 @@ pub struct RPCErrorList {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct RPCError {
     #[serde(rename = "error-severity")]
     pub error_severity: String,
     #[serde(rename = "error-path")]
-    pub error_path: String,
+    pub error_path: Option<String>,
     #[serde(rename = "error-message")]
     pub error_message: String,
     #[serde(rename = "error-info")]
-    pub error_info: RPCErrorInfo,
+    pub error_info: Option<RPCErrorInfo>,
+    #[serde(rename = "source-daemon")]
+    pub source_daemon: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct RPCErrorInfo {
     #[serde(rename = "bad-element")]
-    pub bad_element: String,
+    pub bad_element: Option<String>,
 }
 
 impl Display for RPCError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(
             f,
-            "{} at {} {}",
-            self.error_severity, self.error_path, self.error_info.bad_element
+            "{} at {:?} {:?}",
+            self.error_severity,
+            self.error_path,
+            self.error_info
+                .as_ref()
+                .map(|error_info| &error_info.bad_element)
         )?;
         writeln!(f, "{}", self.error_message)?;
         Ok(())

@@ -1,10 +1,13 @@
 use super::xml::RPCError;
+use crate::netconf::RPCReplyCommand;
 
 #[derive(Debug)]
 pub enum NETCONFError {
     IoError(std::io::Error),
     XmlError(quick_xml::Error),
     XmlDeError(quick_xml::DeError),
+    MissingOk,
+    UnexpectedCommand(RPCReplyCommand),
     RpcError(RPCError),
 }
 

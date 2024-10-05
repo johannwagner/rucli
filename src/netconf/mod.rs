@@ -6,7 +6,10 @@ use quick_xml::{de::from_str, se::to_string};
 mod error;
 pub mod xml;
 
-use crate::netconf::xml::{RPCError, RPCErrorInfo, RPC};
+use crate::netconf::error::NETCONFError;
+use crate::netconf::xml::LoadConfigurationResultsEnum;
+use crate::netconf::xml::RPCReplyCommand;
+use crate::netconf::xml::RPC;
 
 use self::{
     error::NETCONFResult,
@@ -55,15 +58,19 @@ impl NETCONFClient {
             capabilities: xml::Capabilities {
                 capability: vec!["urn:ietf:params:netconf:base:1.0".to_owned()],
             },
+            namespace: None,
+            session_id: None,
         };
         let hello_xml = to_string(&hello)?;
         let payload_mod = format!("{}\n]]>]]>\n", hello_xml);
+        //println!("{}", payload_mod);
         let wb = self.write(payload_mod.as_bytes())?;
         return Ok(wb);
     }
 
     fn read_hello(&mut self) -> NETCONFResult<Hello> {
         let str = self.read()?;
+        //eprintln!("{}", str);
         let hello = from_str(&str)?;
         return Ok(hello);
     }
@@ -71,58 +78,81 @@ impl NETCONFClient {
     fn send_rpc(&mut self, rpc: RPC) -> NETCONFResult<()> {
         let rpc_xml = to_string(&rpc)?;
         let payload = format!("{}\n]]>]]>\n", rpc_xml).replace("&quot;", "\"");
-        // println!("{}", payload);
+        //println!("{}", payload);
         let wb = self.write(payload.as_bytes())?;
         return Ok(wb);
     }
 
-    fn read_result(&mut self) -> NETCONFResult<RPCReply> {
+    fn read_result(&mut self) -> NETCONFResult<impl Iterator<Item = RPCReplyCommand>> {
         let str = self.read()?;
-        // println!("{}", str);
-        let conf_info: RPCReply = from_str(&str)?;
-
-        // FIXME: Errors might not come first.
-        match conf_info.rpc_reply.first() {
-            Some(xml::RPCReplyCommand::RPCError(x)) => {
-                let rpc: RPCError = RPCError {
-                    error_info: RPCErrorInfo {
-                        bad_element: x.error_info.bad_element.to_string(),
-                    },
-                    error_severity: x.error_severity.to_string(),
-                    error_path: x.error_path.to_string(),
-                    error_message: x.error_message.to_string(),
-                };
-                return Err(rpc.into());
-            }
-            _ => Ok(conf_info),
-        }
+        //eprintln!("{}", str);
+        Ok(from_str::<RPCReply>(&str)?.rpc_reply.into_iter())
     }
 
-    pub fn send_command(&mut self, command: String, format: String) -> NETCONFResult<RPCReply> {
+    pub fn send_command(&mut self, command: String, format: String) -> NETCONFResult<String> {
         let c = RPC {
-            rpc: RPCCommand::Command { command, format },
+            rpc: RPCCommand::Command {
+                command,
+                format: format.clone(),
+            },
         };
         let _ = self.send_rpc(c)?;
-        return self.read_result();
+        let mut output = None;
+        for result in self.read_result()? {
+            match result {
+                RPCReplyCommand::RPCError(error) => {
+                    if error.error_severity == "warning" {
+                        let mut msg = "Warning: ".to_string();
+                        if let Some(error_path) = error.error_path {
+                            msg.push_str(&error_path);
+                            msg.push_str(&" ");
+                        }
+                        msg.push_str(&error.error_message);
+                        eprintln!("{}", msg);
+                    } else {
+                        return Err(error.into());
+                    }
+                }
+                RPCReplyCommand::Other(text) if output.is_none() && format == "json" => {
+                    output = Some(text)
+                }
+                RPCReplyCommand::Output { text } if output.is_none() && format == "text" => {
+                    output = Some(text)
+                }
+                other => return Err(NETCONFError::UnexpectedCommand(other)),
+            }
+        }
+        output.ok_or(NETCONFError::MissingOk)
     }
 
-    pub fn lock_configuration(&mut self) -> NETCONFResult<RPCReply> {
+    pub fn lock_configuration(&mut self) -> NETCONFResult<()> {
         let c = RPC {
             rpc: RPCCommand::LockConfiguration {},
         };
         let _ = self.send_rpc(c)?;
-        return self.read_result();
+        for result in self.read_result()? {
+            match result {
+                other => return Err(NETCONFError::UnexpectedCommand(other)),
+            }
+        }
+        Ok(())
     }
 
-    pub fn unlock_configuration(&mut self) -> NETCONFResult<RPCReply> {
+    pub fn unlock_configuration(&mut self) -> NETCONFResult<()> {
         let c = RPC {
             rpc: RPCCommand::UnlockConfiguration {},
         };
         let _ = self.send_rpc(c)?;
-        return self.read_result();
+        for result in self.read_result()? {
+            match result {
+                RPCReplyCommand::Ok => {} // sometimes sent, sometimes not
+                other => return Err(NETCONFError::UnexpectedCommand(other)),
+            }
+        }
+        Ok(())
     }
 
-    pub fn apply_configuration(&mut self, confirm_timeout: Option<i32>) -> NETCONFResult<RPCReply> {
+    pub fn apply_configuration(&mut self, confirm_timeout: Option<i32>) -> NETCONFResult<()> {
         if let Some(confirm_timeout) = confirm_timeout {
             let c = RPC {
                 rpc: RPCCommand::CommitConfirmedConfiguration {
@@ -137,18 +167,59 @@ impl NETCONFClient {
             };
             let _ = self.send_rpc(c)?;
         }
-        return self.read_result();
+        let mut ok = None;
+        for result in self.read_result()? {
+            match result {
+                RPCReplyCommand::RPCError(error) => {
+                    if error.error_severity == "warning" {
+                        let mut msg = "Warning: ".to_string();
+                        if let Some(error_path) = error.error_path {
+                            msg.push_str(&error_path);
+                            msg.push_str(&" ");
+                        }
+                        msg.push_str(&error.error_message);
+                        eprintln!("{}", msg);
+                    } else {
+                        return Err(error.into());
+                    }
+                }
+                RPCReplyCommand::Other(_) => {} // ???
+                RPCReplyCommand::Ok => ok = Some(()),
+                other => return Err(NETCONFError::UnexpectedCommand(other)),
+            }
+        }
+        ok.ok_or(NETCONFError::MissingOk)
     }
 
-    pub fn confirm_configuration(&mut self) -> NETCONFResult<RPCReply> {
+    pub fn confirm_configuration(&mut self) -> NETCONFResult<()> {
         let c = RPC {
             rpc: RPCCommand::CommitConfiguration {},
         };
         let _ = self.send_rpc(c)?;
-        return self.read_result();
+        let mut ok = None;
+        for result in self.read_result()? {
+            match result {
+                RPCReplyCommand::RPCError(error) => {
+                    if error.error_severity == "warning" {
+                        let mut msg = "Warning: ".to_string();
+                        if let Some(error_path) = error.error_path {
+                            msg.push_str(&error_path);
+                            msg.push_str(&" ");
+                        }
+                        msg.push_str(&error.error_message);
+                        eprintln!("{}", msg);
+                    } else {
+                        return Err(error.into());
+                    }
+                }
+                RPCReplyCommand::Ok => ok = Some(()),
+                other => return Err(NETCONFError::UnexpectedCommand(other)),
+            }
+        }
+        ok.ok_or(NETCONFError::MissingOk)
     }
 
-    pub fn load_configuration(&mut self, cfg: String) -> NETCONFResult<RPCReply> {
+    pub fn load_configuration(&mut self, cfg: String) -> NETCONFResult<()> {
         let c = RPC {
             rpc: RPCCommand::LoadConfiguration {
                 format: "text".to_string(),
@@ -158,10 +229,41 @@ impl NETCONFClient {
         };
         let _ = self.send_rpc(c)?;
 
-        return self.read_result();
+        let mut load_config_result = None;
+        for result in self.read_result()? {
+            match result {
+                RPCReplyCommand::LoadConfigurationResults(results) => {
+                    load_config_result = Some(results);
+                }
+                other => return Err(NETCONFError::UnexpectedCommand(other)),
+            }
+        }
+        let mut ok = None;
+        for result in load_config_result
+            .ok_or(NETCONFError::MissingOk)?
+            .load_configuration_results
+        {
+            match result {
+                LoadConfigurationResultsEnum::RPCError(error) => {
+                    if error.error_severity == "warning" {
+                        let mut msg = "Warning: ".to_string();
+                        if let Some(error_path) = error.error_path {
+                            msg.push_str(&error_path);
+                            msg.push_str(&" ");
+                        }
+                        msg.push_str(&error.error_message);
+                        eprintln!("{}", msg);
+                    } else {
+                        return Err(error.into());
+                    }
+                }
+                LoadConfigurationResultsEnum::Ok => ok = Some(()),
+            }
+        }
+        ok.ok_or(NETCONFError::MissingOk)
     }
 
-    pub fn diff_configuration(&mut self, format: String) -> NETCONFResult<RPCReply> {
+    pub fn diff_configuration(&mut self, format: String) -> NETCONFResult<String> {
         let c = RPC {
             rpc: RPCCommand::GetConfiguration {
                 format: format,
@@ -170,6 +272,17 @@ impl NETCONFClient {
             },
         };
         let _ = self.send_rpc(c)?;
-        return self.read_result();
+        let mut diff_result = None;
+        for result in self.read_result()? {
+            match result {
+                RPCReplyCommand::ConfigurationInformation {
+                    configuration_output,
+                } => {
+                    diff_result = Some(configuration_output);
+                }
+                other => return Err(NETCONFError::UnexpectedCommand(other)),
+            }
+        }
+        diff_result.ok_or(NETCONFError::MissingOk)
     }
 }

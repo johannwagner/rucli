@@ -100,7 +100,7 @@ fn main() {
                 .send_command(command_str, format_str.to_owned())
                 .unwrap();
 
-            eprintln!("{}", r)
+            println!("{}", r);
         }
         Commands::Apply {
             local_file,
@@ -108,10 +108,9 @@ fn main() {
         } => {
             let data = fs::read_to_string(local_file).unwrap();
 
-            let _ = netconf_session.lock_configuration().unwrap();
+            netconf_session.lock_configuration().unwrap();
 
-            let load_config_reply = netconf_session.load_configuration(data).unwrap();
-            eprintln!("{}", load_config_reply);
+            netconf_session.load_configuration(data).unwrap();
 
             let diff_reply = netconf_session
                 .diff_configuration("text".to_string())
@@ -120,26 +119,23 @@ fn main() {
 
             eprintln!("Applying configuration...");
 
-            let apply_reply = netconf_session
+            netconf_session
                 .apply_configuration(confirm_timeout)
                 .unwrap();
-            eprintln!("{}", apply_reply);
 
-            let _ = netconf_session.unlock_configuration().unwrap();
+            netconf_session.unlock_configuration().unwrap();
         }
         Commands::Confirm => {
             eprintln!("Confirming configuration");
 
-            let confirm_reply = netconf_session.confirm_configuration().unwrap();
-            eprintln!("{}", confirm_reply);
+            netconf_session.confirm_configuration().unwrap();
         }
         Commands::Check { local_file } => {
             let data = fs::read_to_string(local_file).unwrap();
 
             let _ = netconf_session.lock_configuration().unwrap();
 
-            let load_config_reply = netconf_session.load_configuration(data).unwrap();
-            eprintln!("{}", load_config_reply);
+            netconf_session.load_configuration(data).unwrap();
 
             let diff_reply = netconf_session
                 .diff_configuration("text".to_string())
