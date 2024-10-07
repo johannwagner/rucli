@@ -25,6 +25,7 @@ pub struct Capabilities {
 #[serde(rename = "rpc")]
 #[serde(deny_unknown_fields)]
 pub struct RPC {
+    #[serde(rename = "$value")]
     pub rpc: RPCCommand,
 }
 
