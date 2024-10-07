@@ -6,13 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-clap = { version = "4.3.11", features = ["derive"] }
+clap = { version = "4.5", features = ["derive"] }
 memmem = "0.1.1"
-quick-xml = { version = "0.29.0", features = ["serialize"] }
-serde = "1.0.171"
-serde_derive = "1.0.171"
-ssh2 = "0.9.4"
-ssh2-config = "0.2.0"
+quick-xml = { version = "0.36.0", features = ["serialize"] }
+serde = { version = "1.0", features = [ "derive" ] }
+ssh2 = "0.9"
+ssh2-config = "0.2"
 
 [lib]
 name = "rucli"

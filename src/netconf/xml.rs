@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename = "hello")]
