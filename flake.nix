@@ -36,6 +36,5 @@
       inherit (pkgs) rucli;
       default = packages.rucli;
     };
-    legacyPackages = pkgs;
   });
 }
