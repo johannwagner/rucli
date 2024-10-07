@@ -223,7 +223,7 @@ impl NETCONFClient {
         let c = RPC {
             rpc: RPCCommand::LoadConfiguration {
                 format: "text".to_string(),
-                action: "override".to_string(),
+                action: "update".to_string(),
                 cfg,
             },
         };
