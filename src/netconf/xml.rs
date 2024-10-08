@@ -65,8 +65,13 @@ pub enum RPCCommand {
         #[serde(rename = "@action")]
         action: String,
 
+        #[serde(skip_serializing_if = "Option::is_none")]
         #[serde(rename = "configuration-text")]
-        cfg: String,
+        cfg_text: Option<String>,
+
+        #[serde(skip_serializing_if = "Option::is_none")]
+        #[serde(rename = "configuration-set")]
+        cfg_set: Option<String>,
     },
 
     #[serde(rename = "commit-configuration")]
@@ -83,12 +88,6 @@ pub enum RPCCommand {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ConfigurationConfirmed {}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct ConfigurationInformation {
-    #[serde(rename = "configuration-text")]
-    pub configuration_text: String,
-}
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename = "rpc-reply")]
@@ -140,6 +139,16 @@ pub enum LoadConfigurationResultsEnum {
 
     #[serde(rename = "rpc-error")]
     RPCError(RPCError),
+
+    #[serde(rename = "load-error-count")]
+    LoadErrorCount(LoadErrorCount),
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct LoadErrorCount {
+    #[serde(rename = "$text")]
+    message: String,
 }
 
 impl Display for RPCReply {
@@ -180,6 +189,9 @@ impl Display for RPCReplyCommand {
                         }
                         LoadConfigurationResultsEnum::RPCError(error) => {
                             writeln!(f, "{}", error)?;
+                        }
+                        LoadConfigurationResultsEnum::LoadErrorCount(l)=> {
+                            writeln!(f, "{:?}", l)?;
                         }
                     }
                 }

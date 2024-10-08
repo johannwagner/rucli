@@ -51,6 +51,12 @@ enum Commands {
         confirm_timeout: Option<i32>,
     },
 
+    /// Incrementally updates the config from the given config statements
+    EditConfig {
+        statement: String,
+        confirm_timeout: Option<i32>,
+    },
+
     /// Confirm a previously applied configuration
     Confirm,
 
@@ -114,9 +120,35 @@ fn main() {
 
             netconf_session.lock_configuration().unwrap();
 
-            if let Err(e) = netconf_session.load_configuration(data) {
+            if let Err(e) = netconf_session.load_configuration(data, "update".into(), "text".into()) {
                 eprintln!("Config load failed: {}", e);
                 std::process::exit(1);
+            }
+
+            let diff_reply = netconf_session
+                .diff_configuration("text".to_string())
+                .unwrap();
+            println!("{}", diff_reply);
+
+            eprintln!("Applying configuration...");
+
+            netconf_session
+                .apply_configuration(confirm_timeout)
+                .unwrap();
+
+            netconf_session.unlock_configuration().unwrap();
+        }
+        Commands::EditConfig {
+            statement,
+            confirm_timeout,
+        } => {
+            netconf_session.lock_configuration().unwrap();
+
+            for line in statement.split(";") {
+                if let Err(e) = netconf_session.load_configuration(line.into(), "set".into(), "set".into()) {
+                    eprintln!("Config load failed: {}", e);
+                    std::process::exit(1);
+                }
             }
 
             let diff_reply = netconf_session
@@ -142,7 +174,7 @@ fn main() {
 
             let _ = netconf_session.lock_configuration().unwrap();
 
-            if let Err(e) = netconf_session.load_configuration(data) {
+            if let Err(e) = netconf_session.load_configuration(data, "update".into(), "text".into()) {
                 eprintln!("Config load failed: {}", e);
                 std::process::exit(1);
             }

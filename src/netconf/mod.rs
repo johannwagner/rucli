@@ -201,12 +201,20 @@ impl NETCONFClient {
         ok.ok_or(NETCONFError::MissingOk)
     }
 
-    pub fn load_configuration(&mut self, cfg: String) -> NETCONFResult<()> {
+    pub fn load_configuration(&mut self, cfg: String, action: String, format: String) -> NETCONFResult<()> {
+        let mut cfg_text = None;
+        let mut cfg_set = None;
+        match format.as_str() {
+            "text" => cfg_text = Some(cfg),
+            "set" => cfg_set = Some(cfg),
+            _ => unimplemented!(),
+        }
         let c = RPC {
             rpc: RPCCommand::LoadConfiguration {
-                format: "text".to_string(),
-                action: "update".to_string(),
-                cfg,
+                format,
+                action,
+                cfg_text,
+                cfg_set,
             },
         };
         let _ = self.send_rpc(c)?;
@@ -232,6 +240,9 @@ impl NETCONFClient {
                     } else {
                         return Err(error.into());
                     }
+                }
+                LoadConfigurationResultsEnum::LoadErrorCount(l) => {
+                    eprintln!("{:?}", l);
                 }
                 LoadConfigurationResultsEnum::Ok => ok = Some(()),
             }
