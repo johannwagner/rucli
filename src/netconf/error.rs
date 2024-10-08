@@ -1,38 +1,20 @@
 use super::xml::RPCError;
 use crate::netconf::RPCReplyCommand;
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum NETCONFError {
-    IoError(std::io::Error),
-    XmlError(quick_xml::Error),
-    XmlDeError(quick_xml::DeError),
+    #[error("{0}")]
+    IoError(#[from] std::io::Error),
+    #[error("{0}")]
+    XmlError(#[from] quick_xml::Error),
+    #[error("{0}")]
+    XmlDeError(#[from] quick_xml::DeError),
+    #[error("Missing OK")]
     MissingOk,
+    #[error("Unexpected command: {0}")]
     UnexpectedCommand(RPCReplyCommand),
-    RpcError(RPCError),
+    #[error("{0}")]
+    RpcError(#[from] RPCError),
 }
 
 pub type NETCONFResult<T> = Result<T, NETCONFError>;
-
-impl From<std::io::Error> for NETCONFError {
-    fn from(err: std::io::Error) -> Self {
-        NETCONFError::IoError(err)
-    }
-}
-
-impl From<quick_xml::Error> for NETCONFError {
-    fn from(err: quick_xml::Error) -> Self {
-        NETCONFError::XmlError(err)
-    }
-}
-
-impl From<quick_xml::DeError> for NETCONFError {
-    fn from(err: quick_xml::DeError) -> Self {
-        NETCONFError::XmlDeError(err)
-    }
-}
-
-impl From<RPCError> for NETCONFError {
-    fn from(err: RPCError) -> Self {
-        NETCONFError::RpcError(err)
-    }
-}

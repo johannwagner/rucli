@@ -354,6 +354,7 @@ dependencies = [
  "serde",
  "ssh2",
  "ssh2-config",
+ "thiserror",
 ]
 
 [[package]]

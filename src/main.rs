@@ -114,7 +114,10 @@ fn main() {
 
             netconf_session.lock_configuration().unwrap();
 
-            netconf_session.load_configuration(data).unwrap();
+            if let Err(e) = netconf_session.load_configuration(data) {
+                eprintln!("Config load failed: {}", e);
+                std::process::exit(1);
+            }
 
             let diff_reply = netconf_session
                 .diff_configuration("text".to_string())
@@ -139,7 +142,10 @@ fn main() {
 
             let _ = netconf_session.lock_configuration().unwrap();
 
-            netconf_session.load_configuration(data).unwrap();
+            if let Err(e) = netconf_session.load_configuration(data) {
+                eprintln!("Config load failed: {}", e);
+                std::process::exit(1);
+            }
 
             let diff_reply = netconf_session
                 .diff_configuration("text".to_string())

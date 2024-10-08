@@ -102,13 +102,7 @@ impl NETCONFClient {
             match result {
                 RPCReplyCommand::RPCError(error) => {
                     if error.error_severity == "warning" {
-                        let mut msg = "Warning: ".to_string();
-                        if let Some(error_path) = error.error_path {
-                            msg.push_str(&error_path);
-                            msg.push_str(&" ");
-                        }
-                        msg.push_str(&error.error_message);
-                        eprintln!("{}", msg);
+                        eprintln!("{}", error);
                     } else {
                         return Err(error.into());
                     }
@@ -172,13 +166,7 @@ impl NETCONFClient {
             match result {
                 RPCReplyCommand::RPCError(error) => {
                     if error.error_severity == "warning" {
-                        let mut msg = "Warning: ".to_string();
-                        if let Some(error_path) = error.error_path {
-                            msg.push_str(&error_path);
-                            msg.push_str(&" ");
-                        }
-                        msg.push_str(&error.error_message);
-                        eprintln!("{}", msg);
+                        eprintln!("{}", error);
                     } else {
                         return Err(error.into());
                     }
@@ -201,13 +189,7 @@ impl NETCONFClient {
             match result {
                 RPCReplyCommand::RPCError(error) => {
                     if error.error_severity == "warning" {
-                        let mut msg = "Warning: ".to_string();
-                        if let Some(error_path) = error.error_path {
-                            msg.push_str(&error_path);
-                            msg.push_str(&" ");
-                        }
-                        msg.push_str(&error.error_message);
-                        eprintln!("{}", msg);
+                        eprintln!("{}", error);
                     } else {
                         return Err(error.into());
                     }
@@ -246,13 +228,7 @@ impl NETCONFClient {
             match result {
                 LoadConfigurationResultsEnum::RPCError(error) => {
                     if error.error_severity == "warning" {
-                        let mut msg = "Warning: ".to_string();
-                        if let Some(error_path) = error.error_path {
-                            msg.push_str(&error_path);
-                            msg.push_str(&" ");
-                        }
-                        msg.push_str(&error.error_message);
-                        eprintln!("{}", msg);
+                        eprintln!("{}", error);
                     } else {
                         return Err(error.into());
                     }

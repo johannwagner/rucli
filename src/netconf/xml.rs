@@ -191,20 +191,19 @@ impl Display for RPCReplyCommand {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-
-pub struct RPCErrorList {
-    element: Vec<RPCError>,
-}
-
-#[derive(Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct RPCError {
     #[serde(rename = "error-severity")]
     pub error_severity: String,
-    #[serde(rename = "error-path")]
-    pub error_path: Option<String>,
     #[serde(rename = "error-message")]
     pub error_message: String,
+
+    #[serde(rename = "error-path")]
+    pub error_path: Option<String>,
+    #[serde(rename = "error-type")]
+    pub error_type: Option<String>,
+    #[serde(rename = "error-tag")]
+    pub error_tag: Option<String>,
     #[serde(rename = "error-info")]
     pub error_info: Option<RPCErrorInfo>,
     #[serde(rename = "source-daemon")]
@@ -215,21 +214,34 @@ pub struct RPCError {
 #[serde(deny_unknown_fields)]
 pub struct RPCErrorInfo {
     #[serde(rename = "bad-element")]
-    pub bad_element: Option<String>,
+    pub bad_element: String,
 }
 
 impl Display for RPCError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(
+        write!(
             f,
-            "{} at {:?} {:?}",
-            self.error_severity,
-            self.error_path,
-            self.error_info
-                .as_ref()
-                .map(|error_info| &error_info.bad_element)
+            "{}",
+            self.error_severity
         )?;
-        writeln!(f, "{}", self.error_message)?;
+        if let Some(error_path) = &self.error_path {
+            write!(
+                f,
+                " {}",
+                error_path
+            )?;
+        }
+        write!(f, ": {}", self.error_message)?;
+        if let Some(error_info) = &self.error_info {
+            write!(
+                f,
+                " (bad element: {})",
+                error_info.bad_element
+            )?;
+        }
+        write!(f, "")?;
         Ok(())
     }
 }
+
+impl std::error::Error for RPCError { }
