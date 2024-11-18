@@ -23,6 +23,9 @@ struct Cli {
     #[arg(long, short, action=ArgAction::SetTrue)]
     debug: bool,
 
+    #[arg(long, short, action=ArgAction::SetTrue)]
+    diff: bool,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -128,7 +131,9 @@ fn main() {
             let diff_reply = netconf_session
                 .diff_configuration("text".to_string())
                 .unwrap();
-            println!("{}", diff_reply);
+            if cli.diff {
+                println!("{}", diff_reply);
+            }
 
             eprintln!("Applying configuration...");
 
@@ -154,7 +159,9 @@ fn main() {
             let diff_reply = netconf_session
                 .diff_configuration("text".to_string())
                 .unwrap();
-            println!("{}", diff_reply);
+            if cli.diff {
+                println!("{}", diff_reply);
+            }
 
             eprintln!("Applying configuration...");
 
@@ -182,8 +189,9 @@ fn main() {
             let diff_reply = netconf_session
                 .diff_configuration("text".to_string())
                 .unwrap();
-            println!("{}", diff_reply);
-
+            if cli.diff {
+                println!("{}", diff_reply);
+            }
             let _ = netconf_session.unlock_configuration().unwrap();
         }
     }
